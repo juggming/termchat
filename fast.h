@@ -61,3 +61,6 @@ ssize_t nwrite(int filedes, const void *buf, size_t size)
     }
     return size;
 }
+
+int isBigEndian(void);
+
