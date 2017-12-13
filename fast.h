@@ -9,6 +9,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <poll.h>
+#include <sys/times.h>
+
+
 /*
  * function: 从filedes读取size长的字节至buf中
  *      参数：
@@ -45,7 +49,7 @@ ssize_t nwrite(int filedes, const void *buf, size_t size)
 {
     size_t nleft;
     ssize_t wbytes;
-    const char *ptr = buf;
+    const char *ptr = (const char *)buf;
 
     nleft = size;
     while(nleft > 0) {
@@ -60,6 +64,4 @@ ssize_t nwrite(int filedes, const void *buf, size_t size)
     }
     return size;
 }
-
-int isBigEndian(void);
 
