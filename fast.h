@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <unistd.h>
-#include <error.h>
 #include <errno.h>
 #include <string.h>
 #include <getopt.h>
@@ -24,7 +23,7 @@ ssize_t nread(int filedes, void *buf, size_t size)
     ssize_t rbytes;
     size_t nleft;
 
-    char *ptr = buf;
+    char *ptr = (char *)buf;
     nleft = size;
     while(nleft > 0) {
         if((rbytes = read(filedes, ptr, nleft)) < 0)
