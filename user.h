@@ -30,10 +30,15 @@ struct option long_options[] = {
 
 const char *short_options = "nlu:p:h";
 
+void print_termchat_usage(void)
+{
+    fprintf(stdout, "termchat <-nl> [-u username] [-p password]\n");
+}
 void client_command_parse(int args, char **pptrarg, char *mode, userInfo *pinfo)
 {
     int option_index = 0;
     int c;
+    size_t len;
 
     c = getopt_long(args, pptrarg, short_options, long_options, &option_index);
     if(c < 0) {
@@ -50,19 +55,19 @@ void client_command_parse(int args, char **pptrarg, char *mode, userInfo *pinfo)
             *mode = TC_MSG_SIN;
             break;
         case 'u':
-            size_t nameLen = strlen(optarg);
-            if(nameLen >= MAX_NAME_LENGTH) {
-                fprintf(stderr, "user name must be less than %d characters\n", MAX_NAME_LENGTH);a
+            len = strlen(optarg);
+            if(len >= MAX_NAME_LENGTH) {
+                fprintf(stderr, "user name must be less than %d characters\n", MAX_NAME_LENGTH);
                     exit(EXIT_FAILURE);
             }
-            strncpy(pinfo->ui_name, optarg, nameLen);
+            strncpy(pinfo->ui_name, optarg, len);
             break;
         case 'p':
-            size_t passwdLen = strlen(optarg);
-            if(passwdLen >= MAX_PASSWD_LENGTH) {
+            len = strlen(optarg);
+            if(len >= MAX_PASSWD_LENGTH) {
                 fprintf(stderr, "user's password length must be less than %d characters\n", MAX_PASSWD_LENGTH);
             }
-            strncpy(pinfo->ui_passwd, optarg, passwdLen);
+            strncpy(pinfo->ui_passwd, optarg, len);
             break;
         case 'h':
         default:
