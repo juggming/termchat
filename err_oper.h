@@ -5,9 +5,9 @@
 #include <errno.h>
 #include <string.h>
 #include <syslog.h>
+#include <unistd.h>
 
-
-#define MAXLINE_SIZE 127
+#define MAXLINE_SIZE (int)sysconf(_SC_LINE_MAX)
 /*
  *  function:       sterror(errno)?     exit_handler        syslog_class
  *  err_dump()      Y                   abort()             LOG_ERR
@@ -19,6 +19,11 @@
 
 int daemon_proc;
 static void err_doit(int, int, const char *, va_list );
+
+int get_maxline_size(void)
+{
+    return (int)sysconf(_SC_LINE_MAX);
+}
 
 
 void err_ret(const char *fmt, ...)
@@ -75,7 +80,7 @@ void err_quit(const char *fmt, ...)
 static void err_doit(int errnoflag, int level, const char *fmt, va_list ap)
 {
     int     errno_save, n;
-    char    errbuf[MAXLINE_SIZE + 1];
+    char    errbuf[MAXLINE_SIZE];
 
     errno_save = errno;
 #ifdef HAVE_VSNPRINTF

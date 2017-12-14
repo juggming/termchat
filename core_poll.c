@@ -21,33 +21,42 @@ int main(int argc, char *argv[])
     socklen_t socklen;
     char serv_buf[RECV_BUF_SIZE];
 
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        err_sys("socket");
+
 
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(TERM_CHAT_SERVER_PORT);
 
-    bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    if(bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        err_sys("bind");
 
-    listen(listenfd, TERM_CHAT_BACKLOG);
+    if(listen(listenfd, TERM_CHAT_BACKLOG) < 0)
+        err_sys("listen");
 
 
     omax = get_open_max();
-    struct pollfd client[omax]; client[0].fd = listenfd;
+    struct pollfd client[omax];
+
+    client[0].fd = listenfd;
     client[0].events = POLLRDNORM;
     for(i = 1; i < omax; i++)
         client[i].fd = -1;
-    max_index =
+    max_index = 0;
 
     /*
      * Main loop body
      */
     while(true){
-        ready_conn = poll(client, max_index + 1, -1);
+        if((ready_conn = poll(client, max_index + 1, -1)) < 0)
+            err_sys("poll");
+
         if(client[0].revents & POLLRDNORM) {
             socklen = sizeof(peeraddr);
-            connfd = accept(listenfd, (struct sockaddr *)&peeraddr, &socklen);
+            if((connfd = accept(listenfd, (struct sockaddr *)&peeraddr, &socklen)) < 0)
+                err_sys("accept");
 
             for(i = 1; i < omax; i++)
                 if(client[i].fd < 0) {
@@ -76,4 +85,10 @@ int main(int argc, char *argv[])
                 break;
         }
     }
+}
+
+
+void do_handler_request(int filedes, void *buf, size_t bufsize)
+{
+
 }

@@ -6,8 +6,12 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "termchat.h"
+
 #define MAX_NAME_LENGTH 32
 #define MAX_PASSWD_LENGTH 32
+
+#define min(a, b) ((a) < (b) ? (a): (b))
 
 typedef struct userInfo {
     char ui_name[MAX_NAME_LENGTH];
@@ -24,9 +28,9 @@ struct option long_options[] = {
     {NULL, 0, NULL , 0},
 };
 
-const char *short_options = "nl:u:ph";
+const char *short_options = "nlu:p:h";
 
-void client_command_parse(int args, char **pptrarg)
+void client_command_parse(int args, char **pptrarg, char *mode, userInfo *pinfo)
 {
     int option_index = 0;
     int c;
@@ -39,21 +43,30 @@ void client_command_parse(int args, char **pptrarg)
     switch(c) {
         case 'n':
             // signed up a new user
-
+            *mode = TC_MSG_SUP;
             break;
         case 'l':
             // connect to the server
-
+            *mode = TC_MSG_SIN;
             break;
         case 'u':
-
+            size_t nameLen = strlen(optarg);
+            if(nameLen >= MAX_NAME_LENGTH) {
+                fprintf(stderr, "user name must be less than %d characters\n", MAX_NAME_LENGTH);a
+                    exit(EXIT_FAILURE);
+            }
+            strncpy(pinfo->ui_name, optarg, nameLen);
             break;
         case 'p':
-
+            size_t passwdLen = strlen(optarg);
+            if(passwdLen >= MAX_PASSWD_LENGTH) {
+                fprintf(stderr, "user's password length must be less than %d characters\n", MAX_PASSWD_LENGTH);
+            }
+            strncpy(pinfo->ui_passwd, optarg, passwdLen);
             break;
         case 'h':
         default:
-            //print useage
+            print_termchat_usage();
             break;
     }
 
