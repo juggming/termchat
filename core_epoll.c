@@ -1,6 +1,6 @@
 #include "fast.h"
 #include "err_oper.h"
-#include "termchat.h"
+#include "user.h"
 #include <sys/epoll.h>
 #include <linux/limits.h>
 #include <assert.h>
@@ -15,6 +15,7 @@
 #define EPOLL_ARRAY_SIZE    20
 
 #define TC_FILE_MODE    (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+
 
 static int tc_core_init(uint16_t port);
 static void userinfo_db_init(const char *dbname);
@@ -162,10 +163,7 @@ void handler_user_login(int sockfd)
 {
 
 }
-void handler_user_register(int sockfd)
-{
 
-}
 void handler_recv_file(int sockfd)
 {
     char    recv_buf[MAX_BUF_SIZE];
@@ -208,17 +206,52 @@ static void userinfo_db_init(const char *dbname)
 
     ret = db_create(&ptrdb,NULL, 0);
     if(ret < 0)
-        err_sys("db_create");
+        ptrdb->err(ptrdb, ret, "%s", dbname);
 
     flags = DB_CREATE | DB_EXCL;
     ret = ptrdb->open(ptrdb, NULL, dbname, NULL, DB_BTREE, flags, 0);
     if(ret < 0)
-        err_sys("ptrdb->open");
+        ptrdb->err(ptrdb, ret, "%s",dbname);
     ptrdb->close(ptrdb, 0);
 }
 
 void handler_user_register(int sockfd)
 {
-    DB *ptrdb;
+    DB      *ptrdb;
+    u_int32_t   flags;
+    int     ret;
+    DBT     key, data;
+    userInfo user;
 
+    //fill up userInfo data
+    nread_nonblock(sockfd, user.ui_name, MAX_NAME_LENGTH);
+    nread_nonblock(sockfd, user.ui_passwd, MAX_PASSWD_LENGTH);
+
+    user.ui_regtime = time(NULL);
+    memset(&key, 0, sizeof(key));
+    memset(&data, 0, sizeof(data));
+    key.data = user.ui_name;
+    key.size = sizeof(MAX_NAME_LENGTH);
+
+    data.data = &user;
+    data.size = sizeof(user);
+
+    ret = db_create(&ptrdb, NULL, 0);
+    if(ret < 0)
+        ptrdb->err(ptrdb, ret, "%s", TC_USER_INFO_DB);
+
+    flags = DB_CREATE;
+    ret = ptrdb->open(ptrdb, NULL, TC_USER_INFO_DB, NULL, DB_BTREE, flags, 0);
+    if(ret < 0)
+        ptrdb->err(ptrdb, ret, "%s", TC_USER_INFO_DB);
+    ret = ptrdb->put(ptrdb, NULL, &key, &data, DB_NOOVERWRITE);
+    if(ret < 0) {
+        if(ret == DB_KEYEXIST)
+            // you need to notify the client
+            ptrdb->err(ptrdb, ret, "%s", TC_USER_INFO_DB);
+        else
+            ptrdb->err(ptrdb, ret, "%s", TC_USER_INFO_DB);
+    }
+
+    ptrdb->close(ptrdb, 0);
 }
