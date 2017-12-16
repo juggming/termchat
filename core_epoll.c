@@ -13,6 +13,7 @@
 #define TC_LISTEN_BACKLOG   20
 #define MAX_BUF_SIZE        4096
 #define EPOLL_ARRAY_SIZE    20
+#define TC_ERR_BUF_SIZE     80
 
 #define TC_FILE_MODE    (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
@@ -26,6 +27,7 @@ void handler_user_login(int sockfd);
 void handler_user_register(int sockfd);
 void handler_recv_file(int sockfd);
 void handler_regular_message(int sockfd);
+void do_handler_reply(int sockfd, const char mode, const char *reply);
 
 int main(int argc, char *argv[])
 {
@@ -33,6 +35,7 @@ int main(int argc, char *argv[])
     int listenfd, epfd;
 
     listenfd = tc_core_init(TC_SERVER_PORT);
+    userinfo_db_init(TC_USER_INFO_DB);
 
     epfd = epoll_create1(0); // FD_CLOEXEC
     ev.data.fd = listenfd;
@@ -158,12 +161,6 @@ void do_handler_request(int sockfd)
 }
 
 
-
-void handler_user_login(int sockfd)
-{
-
-}
-
 void handler_recv_file(int sockfd)
 {
     char    recv_buf[MAX_BUF_SIZE];
@@ -194,7 +191,7 @@ void handler_recv_file(int sockfd)
 }
 void handler_regular_message(int sockfd)
 {
-
+    return;
 }
 
 
@@ -254,4 +251,56 @@ void handler_user_register(int sockfd)
     }
 
     ptrdb->close(ptrdb, 0);
+}
+
+
+void handler_user_login(int sockfd)
+{
+    DB      *ptrdb;
+    u_int32_t   flags;
+    int     ret;
+    DBT     key, data;
+    userInfo user;
+
+    //fill up userInfo data
+    nread_nonblock(sockfd, user.ui_name, MAX_NAME_LENGTH);
+    nread_nonblock(sockfd, user.ui_passwd, MAX_PASSWD_LENGTH);
+
+    memset(&key, 0, sizeof(key));
+    memset(&data, 0, sizeof(data));
+
+    ret = db_create(&ptrdb, NULL, 0);
+    if(ret < 0)
+        ptrdb->err(ptrdb, ret, "%s", TC_USER_INFO_DB);
+
+    flags = DB_CREATE;
+    ret = ptrdb->open(ptrdb, NULL, TC_USER_INFO_DB, NULL, DB_BTREE, flags, 0);
+    if(ret < 0)
+        ptrdb->err(ptrdb, ret, "%s", TC_USER_INFO_DB);
+    ret = ptrdb->get(ptrdb, NULL, &key, &data, 0);
+    if(ret != 0) {
+        if(ret == DB_NOTFOUND)
+            // you need to notify the client
+            do_handler_reply(sockfd, TC_MSG_ERR, db_strerror(ret));
+        else
+            ptrdb->err(ptrdb, ret, "%s", TC_USER_INFO_DB);
+    }
+    else {
+        // compare user typed-in password with the one in BerkeleyDB
+        if((strncmp(user.ui_passwd, ((userInfo *)&data)->ui_passwd, MAX_PASSWD_LENGTH)) != 0)
+            do_handler_reply(sockfd, TC_MSG_ERR, db_strerror(ret));
+    }
+
+    ptrdb->close(ptrdb, 0);
+}
+
+
+void do_handler_reply(int sockfd, const char mode, const char *reply)
+{
+    char linebuf[TC_ERR_BUF_SIZE];
+
+    assert(strlen(reply) < TC_ERR_BUF_SIZE);
+    linebuf[0] = mode;
+    strncpy(linebuf + 1, reply, strlen(reply) + 1);
+    nwrite_nonblock(sockfd, linebuf, strlen(linebuf) + 1);
 }
