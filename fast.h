@@ -11,6 +11,7 @@
 
 #include <poll.h>
 #include <sys/times.h>
+#include <fcntl.h>
 
 
 /*
@@ -55,6 +56,49 @@ ssize_t nwrite(int filedes, const void *buf, size_t size)
     while(nleft > 0) {
         if((wbytes = write(filedes, ptr, nleft)) < 0) {
             if(wbytes < 0 && errno == EINTR)
+                wbytes = 0;
+            else
+                return (-1);
+        }
+        nleft -= wbytes;
+        ptr += wbytes;
+    }
+    return size;
+}
+
+ssize_t nread_nonblock(int filedes, void *buf, size_t size)
+{
+    ssize_t rbytes;
+    size_t nleft;
+
+    char *ptr = (char *)buf;
+    nleft = size;
+    while(nleft > 0) {
+        if((rbytes = read(filedes, ptr, nleft)) < 0)
+        {
+            if((errno == EAGAIN) || (errno == EWOULDBLOCK))
+                rbytes = 0;
+            else
+                return (-1);
+        }
+        else if(rbytes == 0)
+            break;
+        nleft -= rbytes;
+        ptr += rbytes;
+    }
+    return (size - nleft);
+}
+
+ssize_t nwrite_nonblock(int filedes, const void *buf, size_t size)
+{
+    size_t nleft;
+    ssize_t wbytes;
+    const char *ptr = (const char *)buf;
+
+    nleft = size;
+    while(nleft > 0) {
+        if((wbytes = write(filedes, ptr, nleft)) < 0) {
+            if(wbytes < 0 && ((errno == EINTR) || (errno == EWOULDBLOCK)))
                 wbytes = 0;
             else
                 return (-1);
