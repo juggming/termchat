@@ -15,6 +15,7 @@
  *          bit0: 置1，表示为流消息
  *          bit1: 置1，表示为
  */
+#define TC_OPER_OK      0b00000001
 #define TC_REG_MSG      0b00001000  /* 0x08 */
 #define TC_MSG_SIN      0b00001100  /* 0x0c */
 #define TC_MSG_SUP      0b00001010  /* 0x0a */
