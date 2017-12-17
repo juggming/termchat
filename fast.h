@@ -12,6 +12,7 @@
 #include <poll.h>
 #include <sys/times.h>
 #include <fcntl.h>
+#include <signal.h>
 
 
 /*

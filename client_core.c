@@ -11,28 +11,61 @@ static int tc_client_init(void);
 static int do_user_login(int sockfd, const userInfo *uinfo);
 static int do_user_register(int sockfd, const userInfo *uinfo);
 static int do_send_file(int connfd, const char *filename);
-static int do_send_message(int connfd, void *msg, size_t msgsize);
+static void do_send_message(int connfd, void *msg, size_t msgsize);
+static int parse_operation_replay(int sockfd, const char mode);
+
+static void switch_working_mode(int sig);
+
+static char work_mode;
 
 
 int main(int argc, char *argv[])
 {
-    char work_mode, prev;
+    char prev_mode;
     userInfo cur_user;
     int sockfd;
 
     sockfd = tc_client_init();
 
     client_command_parse(argc, argv, &work_mode, &cur_user);
-    prev = work_mode;
+    prev_mode = work_mode;
     switch(work_mode) {
         case TC_MSG_SUP:
+            do_user_register(sockfd, &cur_user);
+            if(parse_operation_replay(sockfd, TC_MSG_SUP) < 0) {
+                close(sockfd);
+                exit(EXIT_FAILURE);
+            }
             break;
         case TC_MSG_SIN:
+            do_user_login(sockfd, &cur_user);
+            if(parse_operation_replay(sockfd, TC_MSG_SIN) < 0) {
+                perror("do_user_login");
+                close(sockfd);
+                exit(EXIT_FAILURE);
+            }
             break;
         default:
+            // do nothing here
             break;
     }
+    signal(SIGINT, switch_working_mode);
+    while(1) {
+        int linemax = get_maxline_size();
+        char msg_buf[linemax];
 
+        if(work_mode & TC_REG_MSG) {
+            fprintf(stdout, "\n<message mode>: ");
+            while(fgets(msg_buf, linemax, stdin) != NULL)
+                nwrite(sockfd, msg_buf, linemax);
+        }
+        else if(work_mode & TC_FILE_SYN) {
+            fgets(msg_buf, linemax, stdin);
+            do_send_file(sockfd, msg_buf);
+        }
+    }
+
+    close(sockfd);
     exit(EXIT_SUCCESS);
 }
 
@@ -122,8 +155,7 @@ static int do_send_file(int connfd, const char *filename)
         nwrite(connfd, send_buf, rbytes);
     }
     close(filedes);
-
-    return 1;
+    return (parse_operation_replay(connfd, TC_FILE_SYN));
 }
 
 static int parse_operation_replay(int sockfd, const char mode)
@@ -154,3 +186,23 @@ static int parse_operation_replay(int sockfd, const char mode)
         return -1;
     }
 }
+
+
+static void do_send_message(int connfd, void *msg, size_t msgsize)
+{
+    char first_byte = TC_REG_MSG;
+    write(connfd, &first_byte, 1);
+    nwrite(connfd, msg, msgsize);
+}
+
+
+static void switch_working_mode(int sig)
+{
+    if(sig == SIGINT) {
+        if(work_mode & TC_REG_MSG)
+            work_mode = TC_FILE_SYN;
+        else
+            work_mode = TC_REG_MSG;
+    }
+}
+

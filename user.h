@@ -42,39 +42,42 @@ void client_command_parse(int args, char **pptrarg, char *mode, userInfo *pinfo)
     int c;
     size_t len;
 
-    c = getopt_long(args, pptrarg, short_options, long_options, &option_index);
-    if(c < 0) {
-        perror("getopt_long");
-        exit(EXIT_FAILURE);
-    }
-    switch(c) {
-        case 'n':
-            // signed up a new user
-            *mode = TC_MSG_SUP;
-            break;
-        case 'l':
-            // connect to the server
-            *mode = TC_MSG_SIN;
-            break;
-        case 'u':
-            len = strlen(optarg);
-            if(len >= MAX_NAME_LENGTH) {
-                fprintf(stderr, "user name must be less than %d characters\n", MAX_NAME_LENGTH);
+    do {
+        c = getopt_long(args, pptrarg, short_options, long_options, &option_index);
+        if(c < 0) {
+            perror("getopt_long");
+            exit(EXIT_FAILURE);
+        }
+        switch(c) {
+            case 'n':
+                // signed up a new user
+                *mode = TC_MSG_SUP;
+                break;
+            case 'l':
+                // connect to the server
+                *mode = TC_MSG_SIN;
+                break;
+            case 'u':
+                len = strlen(optarg);
+                if(len >= MAX_NAME_LENGTH) {
+                    fprintf(stderr, "user name must be less than %d characters\n", MAX_NAME_LENGTH);
                     exit(EXIT_FAILURE);
-            }
-            strncpy(pinfo->ui_name, optarg, len);
-            break;
-        case 'p':
-            len = strlen(optarg);
-            if(len >= MAX_PASSWD_LENGTH) {
-                fprintf(stderr, "user's password length must be less than %d characters\n", MAX_PASSWD_LENGTH);
-            }
-            strncpy(pinfo->ui_passwd, optarg, len);
-            break;
-        case 'h':
-        default:
-            print_termchat_usage();
-            break;
-    }
+                }
+                strncpy(pinfo->ui_name, optarg, len);
+                break;
+            case 'p':
+                len = strlen(optarg);
+                if(len >= MAX_PASSWD_LENGTH) {
+                    fprintf(stderr, "user's password length must be less than %d characters\n", MAX_PASSWD_LENGTH);
+                }
+                strncpy(pinfo->ui_passwd, optarg, len);
+                break;
+            case 'h':
+            default:
+                print_termchat_usage();
+                break;
+        }
+    } while(c != -1);
+
 
 }
