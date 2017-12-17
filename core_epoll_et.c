@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
     epfd = epoll_create1(0); // FD_CLOEXEC
     ev.data.fd = listenfd;
-    ev.events = EPOLLIN | EPOLLET;
+    ev.events = EPOLLIN;
 
     if((epoll_ctl(epfd, EPOLL_CTL_ADD, listenfd, &ev)) < 0)
         err_quit("epoll_ctl");

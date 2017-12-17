@@ -83,7 +83,7 @@ ssize_t nread_nonblock(int filedes, void *buf, size_t size)
                 return (-1);
         }
         else if(rbytes == 0)
-            break;
+            continue;
         nleft -= rbytes;
         ptr += rbytes;
     }
